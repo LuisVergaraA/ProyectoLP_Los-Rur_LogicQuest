@@ -53,3 +53,63 @@ class LeaderboardRow(BaseModel):
     name: str
     total_points: int
     badges_count: int
+
+
+# --- Schemas para Ciclos ---
+
+class CycleTestCase(BaseModel):
+    input: str
+    output: str
+
+class CycleCreate(BaseModel):
+    title: str = Field(min_length=1)
+    description: str
+    difficulty: str # facil, medio, dificil
+    loop_type: str # for, while
+    test_cases: List[CycleTestCase]
+    points: int = 10
+
+class CycleOut(BaseModel):
+    id: int
+    title: str
+    description: str
+    difficulty: str
+    loop_type: str
+    test_cases: List[CycleTestCase]
+    points: int
+    is_active: bool
+    created_at: datetime
+
+# Schema para intentar un ejercicio
+class CycleAttemptCreate(BaseModel):
+    user_id: int
+    user_answer: dict # Esperamos algo como {"outputs": ["..."]}
+    execution_time_ms: int = 0
+
+class CycleAttemptResponse(BaseModel):
+    success: bool
+    message: str
+    is_correct: bool
+    points_earned: int
+    attempt_id: int
+
+# Schemas para el Historial (Complejo)
+class StatsBase(BaseModel):
+    total_attempts: int
+    passed: int
+    failed: int
+    success_rate: float
+    total_points: int
+    average_time_ms: float
+
+class ProgressByType(BaseModel):
+    total_cycles: int
+    completed_cycles: int
+    completion_rate: float
+    total_attempts: int
+    correct_attempts: int
+
+class HistoryResponse(BaseModel):
+    statistics: StatsBase
+    progress_by_type: dict[str, ProgressByType] # keys: 'for', 'while'
+    # recent_attempts se podría agregar si definimos un schema para ello
