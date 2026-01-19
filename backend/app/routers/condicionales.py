@@ -65,6 +65,12 @@ def attempt_exercise(exercise_id: int, payload: ConditionalAttemptCreate, db: Se
     
     is_correct = payload.selected_index == exercise.correct_index
     
+    # --- INICIO DEL CAMBIO ---
+    # Sumamos 10 puntos si la respuesta es correcta
+    if is_correct:
+        user.total_points += 10
+    # --- FIN DEL CAMBIO ---
+    
     attempt = ConditionalAttempt(
         user_id=payload.user_id,
         exercise_id=exercise_id,

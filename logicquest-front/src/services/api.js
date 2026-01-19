@@ -1,6 +1,8 @@
 import axios from 'axios';
 
-const API_URL = 'http://127.0.0.1:8000/api/v1';
+// CAMBIO CLAVE: Usamos solo '/api/v1'. 
+// El archivo vite.config.js se encargará de redirigir esto a http://127.0.0.1:8000
+const API_URL = '/api/v1';
 
 export const api = {
   // CONDICIONALES

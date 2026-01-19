@@ -21,14 +21,20 @@ const Perfil = () => {
       const cycStats = await api.getCiclosHistory(USER_ID);
       setCycleStats(cycStats);
 
-      const totalPoints = cycStats.statistics.total_points || 0;
+      // --- INICIO CORRECCIÓN ---
+      // Calculamos puntos: (Aciertos Condicionales * 10) + Puntos de Ciclos
+      const puntosCondicionales = (condStats.correct_attempts || 0) * 10;
+      const puntosCiclos = cycStats.statistics.total_points || 0;
+      const totalPoints = puntosCondicionales + puntosCiclos;
+      // --- FIN CORRECCIÓN ---
+
       const totalExercises = (condStats.total_attempts || 0) + (cycStats.statistics.total_attempts || 0);
       const correctExercises = (condStats.correct_attempts || 0) + (cycStats.statistics.passed || 0);
 
       setUserData({
         id: USER_ID,
         name: "Estudiante Demo",
-        totalPoints,
+        totalPoints, // Ahora usamos el total calculado correctamente
         totalExercises,
         correctExercises,
         level: Math.floor(totalPoints / 50) + 1
