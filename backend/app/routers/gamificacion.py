@@ -1,79 +1,90 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy import func
-from sqlalchemy.exc import IntegrityError
-
 from ..db import get_db
 from ..models import User, Badge, UserBadge
-from ..schemas import UserCreate, UserOut, BadgeCreate, BadgeOut, AssignBadgeIn, LeaderboardRow
+from ..schemas import UserCreate, UserOut, BadgeCreate, BadgeOut, AssignBadge
 
 router = APIRouter(prefix="/api/v1", tags=["gamificacion"])
 
-
+# Usuarios
 @router.post("/users", status_code=201, response_model=UserOut)
 def create_user(payload: UserCreate, db: Session = Depends(get_db)):
-    item = User(name=payload.name)
-    db.add(item)
+    existing = db.query(User).filter(User.name == payload.name).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="Usuario ya existe")
+    
+    user = User(name=payload.name)
+    db.add(user)
     db.commit()
-    db.refresh(item)
-    return item
+    db.refresh(user)
+    return user
 
-
+# Insignias
 @router.post("/badges", status_code=201, response_model=BadgeOut)
 def create_badge(payload: BadgeCreate, db: Session = Depends(get_db)):
-    item = Badge(code=payload.code, name=payload.name, points=payload.points)
-    db.add(item)
-    try:
-        db.commit()
-    except IntegrityError:
-        db.rollback()
-        raise HTTPException(status_code=409, detail="Badge code ya existe")
-    db.refresh(item)
-    return item
+    existing = db.query(Badge).filter(Badge.code == payload.code).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="Insignia ya existe")
+    
+    badge = Badge(
+        code=payload.code,
+        name=payload.name,
+        points=payload.points
+    )
+    db.add(badge)
+    db.commit()
+    db.refresh(badge)
+    return badge
 
-
-@router.post("/gamificacion/asignar-insignia", status_code=201)
-def assign_badge(payload: AssignBadgeIn, db: Session = Depends(get_db)):
+# Asignar insignia
+@router.post("/gamificacion/asignar-insignia")
+def assign_badge(payload: AssignBadge, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.id == payload.user_id).first()
     if not user:
-        raise HTTPException(status_code=404, detail="Usuario no existe")
-
+        raise HTTPException(status_code=404, detail="Usuario no encontrado")
+    
     badge = db.query(Badge).filter(Badge.id == payload.badge_id).first()
     if not badge:
-        raise HTTPException(status_code=404, detail="Insignia no existe")
-
-    link = UserBadge(user_id=payload.user_id, badge_id=payload.badge_id)
-    db.add(link)
-
-    try:
-        db.commit()
-    except IntegrityError:
-        db.rollback()
-        raise HTTPException(status_code=409, detail="Insignia ya asignada a ese usuario")
-
-    return {"message": "ok", "user_id": payload.user_id, "badge_id": payload.badge_id}
-
-
-@router.get("/gamificacion/leaderboard", response_model=list[LeaderboardRow])
-def leaderboard(db: Session = Depends(get_db)):
-    points_sum = func.coalesce(func.sum(Badge.points), 0).label("total_points")
-    badges_count = func.coalesce(func.count(UserBadge.id), 0).label("badges_count")
-
-    rows = (
-        db.query(User.id.label("user_id"), User.name.label("name"), points_sum, badges_count)
-        .outerjoin(UserBadge, UserBadge.user_id == User.id)
-        .outerjoin(Badge, Badge.id == UserBadge.badge_id)
-        .group_by(User.id)
-        .order_by(points_sum.desc(), User.id.asc())
-        .all()
+        raise HTTPException(status_code=404, detail="Insignia no encontrada")
+    
+    existing = db.query(UserBadge).filter(
+        UserBadge.user_id == payload.user_id,
+        UserBadge.badge_id == payload.badge_id
+    ).first()
+    
+    if existing:
+        return {"success": True, "message": "Usuario ya tiene esta insignia"}
+    
+    user_badge = UserBadge(
+        user_id=payload.user_id,
+        badge_id=payload.badge_id
     )
+    db.add(user_badge)
+    db.commit()
+    
+    return {
+        "success": True,
+        "message": f"Insignia '{badge.name}' asignada a {user.name}"
+    }
 
-    return [
-        LeaderboardRow(
-            user_id=r.user_id,
-            name=r.name,
-            total_points=int(r.total_points),
-            badges_count=int(r.badges_count),
-        )
-        for r in rows
-    ]
+# Leaderboard
+@router.get("/gamificacion/leaderboard")
+def get_leaderboard(db: Session = Depends(get_db)):
+    users = db.query(User).order_by(User.total_points.desc()).limit(10).all()
+    
+    leaderboard = []
+    for i, user in enumerate(users, 1):
+        badges_count = db.query(func.count(UserBadge.id)).filter(
+            UserBadge.user_id == user.id
+        ).scalar()
+        
+        leaderboard.append({
+            "rank": i,
+            "user_id": user.id,
+            "name": user.name,
+            "total_points": user.total_points,
+            "badges_count": badges_count
+        })
+    
+    return {"leaderboard": leaderboard}

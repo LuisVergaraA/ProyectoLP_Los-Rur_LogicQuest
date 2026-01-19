@@ -1,14 +1,13 @@
 from pydantic import BaseModel, Field
-from typing import List
+from typing import List, Dict, Any
 from datetime import datetime
 
-
+# Ejercicios (Condicionales)
 class ExerciseCreate(BaseModel):
-    statement: str = Field(min_length=1)
-    options: List[str] = Field(min_length=2)
-    correct_index: int = Field(ge=0)
+    statement: str
+    options: List[str]
+    correct_index: int
     is_active: bool = True
-
 
 class ExerciseOut(BaseModel):
     id: int
@@ -19,21 +18,32 @@ class ExerciseOut(BaseModel):
     is_active: bool
     created_at: datetime
 
-class UserCreate(BaseModel):
-    name: str = Field(min_length=1)
+class ConditionalAttemptCreate(BaseModel):
+    user_id: int = Field(ge=1)
+    selected_index: int = Field(ge=0)
 
+class ConditionalAttemptResponse(BaseModel):
+    success: bool
+    message: str
+    is_correct: bool
+    correct_index: int
+    attempt_id: int
+
+# Usuarios
+class UserCreate(BaseModel):
+    name: str
 
 class UserOut(BaseModel):
     id: int
     name: str
+    total_points: int
     created_at: datetime
 
-
+# Insignias
 class BadgeCreate(BaseModel):
-    code: str = Field(min_length=1)
-    name: str = Field(min_length=1)
-    points: int = Field(ge=0)
-
+    code: str
+    name: str
+    points: int = 0
 
 class BadgeOut(BaseModel):
     id: int
@@ -42,31 +52,17 @@ class BadgeOut(BaseModel):
     points: int
     created_at: datetime
 
-
-class AssignBadgeIn(BaseModel):
-    user_id: int = Field(ge=1)
-    badge_id: int = Field(ge=1)
-
-
-class LeaderboardRow(BaseModel):
+class AssignBadge(BaseModel):
     user_id: int
-    name: str
-    total_points: int
-    badges_count: int
+    badge_id: int
 
-
-# --- Schemas para Ciclos ---
-
-class CycleTestCase(BaseModel):
-    input: str
-    output: str
-
+# Ciclos
 class CycleCreate(BaseModel):
-    title: str = Field(min_length=1)
+    title: str
     description: str
-    difficulty: str # facil, medio, dificil
-    loop_type: str # for, while
-    test_cases: List[CycleTestCase]
+    difficulty: str = "facil"
+    loop_type: str
+    test_cases: List[Dict[str, str]]
     points: int = 10
 
 class CycleOut(BaseModel):
@@ -75,41 +71,10 @@ class CycleOut(BaseModel):
     description: str
     difficulty: str
     loop_type: str
-    test_cases: List[CycleTestCase]
+    test_cases: List[Dict[str, str]]
     points: int
-    is_active: bool
     created_at: datetime
 
-# Schema para intentar un ejercicio
 class CycleAttemptCreate(BaseModel):
     user_id: int
-    user_answer: dict # Esperamos algo como {"outputs": ["..."]}
-    execution_time_ms: int = 0
-
-class CycleAttemptResponse(BaseModel):
-    success: bool
-    message: str
-    is_correct: bool
-    points_earned: int
-    attempt_id: int
-
-# Schemas para el Historial (Complejo)
-class StatsBase(BaseModel):
-    total_attempts: int
-    passed: int
-    failed: int
-    success_rate: float
-    total_points: int
-    average_time_ms: float
-
-class ProgressByType(BaseModel):
-    total_cycles: int
-    completed_cycles: int
-    completion_rate: float
-    total_attempts: int
-    correct_attempts: int
-
-class HistoryResponse(BaseModel):
-    statistics: StatsBase
-    progress_by_type: dict[str, ProgressByType] # keys: 'for', 'while'
-    # recent_attempts se podría agregar si definimos un schema para ello
+    user_answer: Dict[str, Any]

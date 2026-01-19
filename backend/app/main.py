@@ -1,13 +1,14 @@
 from fastapi import FastAPI
-from .db import Base, engine
-from .routers.condicionales import router as cond_router
-from .routers.gamificacion import router as gam_router
-from .routers.ciclos import router as ciclos_router
-    
-from fastapi.middleware.cors import CORSMiddleware # <--- Agregar import
+from fastapi.middleware.cors import CORSMiddleware
+from .db import engine, Base
+from .routers import condicionales, ciclos, gamificacion
+
+# Crear las tablas
 Base.metadata.create_all(bind=engine)
 
-app = FastAPI(title="LogicQuest API")
+app = FastAPI(title="LogicQuest API", version="1.0.0")
+
+# Configurar CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -15,10 +16,20 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-app.include_router(cond_router)
-app.include_router(gam_router)
-app.include_router(ciclos_router)
+
+# Incluir routers
+app.include_router(condicionales.router)
+app.include_router(ciclos.router)
+app.include_router(gamificacion.router)
+
+@app.get("/")
+def read_root():
+    return {
+        "message": "Bienvenido a LogicQuest API",
+        "version": "1.0.0",
+        "docs": "/docs"
+    }
 
 @app.get("/health")
-def health():
-    return {"status": "ok"}
+def health_check():
+    return {"status": "healthy"}
