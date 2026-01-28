@@ -162,6 +162,18 @@ def agregar_ejercicios():
                 "points": 10
             },
             {
+                "title": "Cuenta regresiva",
+                "description": "Imprime una cuenta regresiva desde N hasta 1 usando while.",
+                "loop_type": "while",
+                "difficulty": "medio",
+                "test_cases": [
+                    {"input": "3", "output": "3 2 1"},
+                    {"input": "2", "output": "2 1"},
+                    {"input": "5", "output": "5 4 3 2 1"}
+                ],
+                "points": 25
+            },
+            {
                 "title": "Tabla del 2",
                 "description": "Completa la tabla de multiplicar del 2 (del 1 al 5)",
                 "loop_type": "for",
